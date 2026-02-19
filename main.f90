@@ -25,6 +25,14 @@ module statistics_mod
         module procedure :: ivector_avg
     endinterface vector_avg
 
+    interface matrix_avg
+        module procedure :: smatrix_avg
+        module procedure :: dmatrix_avg
+        module procedure :: cmatrix_avg
+        module procedure :: zmatrix_avg
+        module procedure :: imatrix_avg
+    endinterface matrix_avg
+
     interface jackknife
         module procedure :: sjackknife
         module procedure :: djackknife
@@ -88,18 +96,66 @@ module statistics_mod
         endsubroutine ijackknife
 
 
-        pure function dmatrix_avg(A, dim) result(avg)
-            real(dp),           intent(in) :: A(:, :)
+        pure function smatrix_avg(A, dim) result(avg)
+            real(sp),           intent(in) :: A(:, :)
             integer , optional, intent(in) :: dim
-            integer  :: actualdim
-            real(dp) :: avg(size(A, 1))
+            integer               :: actualdim
+            real(sp), allocatable :: avg(:)
             if (present(dim)) then
                 actualdim = dim
             else
                 actualdim = 1
             endif
-            avg = sum(A, 2) / size(A, 2)
+            avg = sum(A, actualdim) / size(A, actualdim)
+        endfunction smatrix_avg
+        pure function dmatrix_avg(A, dim) result(avg)
+            real(dp),           intent(in) :: A(:, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, actualdim) / size(A, actualdim)
         endfunction dmatrix_avg
+        pure function cmatrix_avg(A, dim) result(avg)
+            complex(sp),           intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(sp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, actualdim) / size(A, actualdim)
+        endfunction cmatrix_avg
+        pure function zmatrix_avg(A, dim) result(avg)
+            complex(dp),           intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, actualdim) / size(A, actualdim)
+        endfunction zmatrix_avg
+        pure function imatrix_avg(A, dim) result(avg)
+            integer,               intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = real(sum(A, actualdim), dp) / real(size(A, actualdim), dp)
+        endfunction imatrix_avg
 
 
 endmodule statistics_mod
