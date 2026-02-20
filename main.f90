@@ -15,7 +15,8 @@ module statistics_mod
     private
 
     public :: vector_avg
-    public :: jackknife
+    public :: matrix_avg
+    public :: vector_jackknife
 
     interface vector_avg
         module procedure :: svector_avg
@@ -33,14 +34,23 @@ module statistics_mod
         module procedure :: imatrix_avg
     endinterface matrix_avg
 
-    interface jackknife
-        module procedure :: sjackknife
-        module procedure :: djackknife
-        module procedure :: cjackknife
-        module procedure :: zjackknife
-        module procedure :: ijackknife
-    endinterface jackknife
+    interface vector_jackknife
+        module procedure :: svector_jackknife
+        module procedure :: dvector_jackknife
+        module procedure :: cvector_jackknife
+        module procedure :: zvector_jackknife
+        module procedure :: ivector_jackknife
+    endinterface vector_jackknife
 
+    interface matrix_jackknife
+        ! module procedure :: smatrix_jackknife
+        ! module procedure :: dmatrix_jackknife
+        ! module procedure :: cmatrix_jackknife
+        ! module procedure :: zmatrix_jackknife
+        ! module procedure :: imatrix_jackknife
+    endinterface matrix_jackknife
+
+    
     contains
 
         pure real(sp) function svector_avg(x)
@@ -64,36 +74,36 @@ module statistics_mod
             ivector_avg = real(sum(x), dp) / size(x)
         endfunction ivector_avg
 
-        pure subroutine sjackknife(x, avg, err)
+        pure subroutine svector_jackknife(x, avg, err)
             real(sp), intent(in)  :: x(:)
             real(sp), intent(out) :: avg, err
             avg = vector_avg(x)
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
-        endsubroutine sjackknife
-        pure subroutine djackknife(x, avg, err)
+        endsubroutine svector_jackknife
+        pure subroutine dvector_jackknife(x, avg, err)
             real(dp), intent(in)  :: x(:)
             real(dp), intent(out) :: avg, err
             avg = vector_avg(x)
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
-        endsubroutine djackknife
-        pure subroutine cjackknife(x, avg, err)
+        endsubroutine dvector_jackknife
+        pure subroutine cvector_jackknife(x, avg, err)
             complex(sp), intent(in)  :: x(:)
             complex(sp), intent(out) :: avg, err
             avg = vector_avg(x)
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
-        endsubroutine cjackknife
-        pure subroutine zjackknife(x, avg, err)
+        endsubroutine cvector_jackknife
+        pure subroutine zvector_jackknife(x, avg, err)
             complex(dp), intent(in)  :: x(:)
             complex(dp), intent(out) :: avg, err
             avg = vector_avg(x)
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
-        endsubroutine zjackknife
-        pure subroutine ijackknife(x, avg, err)
+        endsubroutine zvector_jackknife
+        pure subroutine ivector_jackknife(x, avg, err)
             integer , intent(in)  :: x(:)
             real(dp), intent(out) :: avg, err
             avg = vector_avg(x)
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
-        endsubroutine ijackknife
+        endsubroutine ivector_jackknife
 
 
         pure function smatrix_avg(A, dim) result(avg)
@@ -133,10 +143,10 @@ module statistics_mod
             avg = sum(A, actualdim) / size(A, actualdim)
         endfunction cmatrix_avg
         pure function zmatrix_avg(A, dim) result(avg)
-            complex(dp),           intent(in) :: A(:, :)
-            integer    , optional, intent(in) :: dim
-            integer                  :: actualdim
-            complex(dp), allocatable :: avg(:)
+            complex(dp),                        intent(in) :: A(:, :)
+            integer                 , optional, intent(in) :: dim
+            integer                                        :: actualdim
+            complex(dp), allocatable                       :: avg(:)
             if (present(dim)) then
                 actualdim = dim
             else
@@ -145,8 +155,8 @@ module statistics_mod
             avg = sum(A, actualdim) / size(A, actualdim)
         endfunction zmatrix_avg
         pure function imatrix_avg(A, dim) result(avg)
-            integer,               intent(in) :: A(:, :)
-            integer    , optional, intent(in) :: dim
+            integer , intent(in)           :: A(:, :)
+            integer , optional, intent(in) :: dim
             integer               :: actualdim
             real(dp), allocatable :: avg(:)
             if (present(dim)) then
@@ -156,6 +166,21 @@ module statistics_mod
             endif
             avg = real(sum(A, actualdim), dp) / real(size(A, actualdim), dp)
         endfunction imatrix_avg
+
+        pure subroutine dmatrix_jackknife(A, avg, err, dim)
+            real(dp),           intent(in)  :: A(:, :)
+            real(dp),           intent(out) :: avg(:)
+            real(dp),           intent(out) :: err
+            integer , optional, intent(in)  :: dim
+            integer :: actualdim
+
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = matrix_avg(A, actualdim)
+        endsubroutine dmatrix_jackknife
 
 
 endmodule statistics_mod
@@ -295,8 +320,8 @@ module measurementtypes_mod
         endsubroutine scamesr_dp_unset
         subroutine scamesr_dp_jackknife(self)
             class(scamesr_dp), intent(inout) :: self
-            associate(binavgs => self%binavgs, nbin => self%nbin, avg => self%avg, err => self%err)
-                call jackknife(binavgs, nbin, avg, err)
+            associate(binavgs => self%binavgs, avg => self%avg, err => self%err)
+                call vector_jackknife(binavgs, avg, err)
             endassociate
         endsubroutine scamesr_dp_jackknife
         subroutine scamesr_dp_avgbin(self, i)
@@ -305,7 +330,7 @@ module measurementtypes_mod
             class(scamesr_dp), intent(inout) :: self
             integer          , intent(in)    :: i
             associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
-                binavgs(i) = vector_avg(bin, binsize)
+                binavgs(i) = vector_avg(bin)
             endassociate
         endsubroutine scamesr_dp_avgbin
         subroutine scamesr_dp_sgnavgadjust(self, sgnmeas)
@@ -333,15 +358,15 @@ module measurementtypes_mod
         endsubroutine scamesr_int_unset
         subroutine scamesr_int_jackknife(self)
             class(scamesr_int), intent(inout) :: self
-            associate(binavgs => self%binavgs, nbin => self%nbin, avg => self%avg, err => self%err)
-                call jackknife(binavgs, nbin, avg, err)
+            associate(binavgs => self%binavgs, avg => self%avg, err => self%err)
+                call vector_jackknife(binavgs, avg, err)
             endassociate
         endsubroutine scamesr_int_jackknife
         subroutine scamesr_int_avgbin(self, i)
             class(scamesr_int), intent(inout) :: self
             integer           , intent(in)    :: i
-            associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
-                binavgs(i) = vector_avg(bin, binsize)
+            associate(binavgs => self%binavgs, bin => self%bin)
+                binavgs(i) = vector_avg(bin)
             endassociate
         endsubroutine scamesr_int_avgbin
 
@@ -368,8 +393,8 @@ module measurementtypes_mod
             ! Later on: binavgs = binavgs / sgnbinavgs
             class(scamesr_dp), intent(inout) :: self
             integer          , intent(in)    :: i
-            associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
-                binavgs(i) = vector_avg(bin, binsize)
+            associate(binavgs => self%binavgs, bin => self%bin)
+                binavgs(i) = vector_avg(bin)
             endassociate
         endsubroutine vecmesr_dp_avgbin
 
