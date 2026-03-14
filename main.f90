@@ -16,7 +16,12 @@ module statistics_mod
 
     public :: vector_avg
     public :: matrix_avg
-    public :: vector_jackknife
+    public :: rank1_avg
+    public :: rank2_avg
+    public :: rank3_avg
+    public :: rank4_avg
+    public :: rank5_avg
+    public :: jackknife
 
     interface vector_avg
         module procedure :: svector_avg
@@ -34,6 +39,46 @@ module statistics_mod
         module procedure :: imatrix_avg
     endinterface matrix_avg
 
+    interface rank1_avg
+        module procedure :: srank1_avg
+        module procedure :: drank1_avg
+        module procedure :: crank1_avg
+        module procedure :: zrank1_avg
+        module procedure :: irank1_avg
+    endinterface rank1_avg
+
+    interface rank2_avg
+        module procedure :: srank2_avg
+        module procedure :: drank2_avg
+        module procedure :: crank2_avg
+        module procedure :: zrank2_avg
+        module procedure :: irank2_avg
+    endinterface rank2_avg
+
+    interface rank3_avg
+        module procedure :: srank3_avg
+        module procedure :: drank3_avg
+        module procedure :: crank3_avg
+        module procedure :: zrank3_avg
+        module procedure :: irank3_avg
+    endinterface rank3_avg
+
+    interface rank4_avg
+        module procedure :: srank4_avg
+        module procedure :: drank4_avg
+        module procedure :: crank4_avg
+        module procedure :: zrank4_avg
+        module procedure :: irank4_avg
+    endinterface rank4_avg
+
+    interface rank5_avg
+        module procedure :: srank5_avg
+        module procedure :: drank5_avg
+        module procedure :: crank5_avg
+        module procedure :: zrank5_avg
+        module procedure :: irank5_avg
+    endinterface rank5_avg
+
     interface vector_jackknife
         module procedure :: svector_jackknife
         module procedure :: dvector_jackknife
@@ -43,16 +88,13 @@ module statistics_mod
     endinterface vector_jackknife
 
     interface matrix_jackknife
-        ! module procedure :: smatrix_jackknife
-        ! module procedure :: dmatrix_jackknife
-        ! module procedure :: cmatrix_jackknife
-        ! module procedure :: zmatrix_jackknife
-        ! module procedure :: imatrix_jackknife
+
     endinterface matrix_jackknife
 
-    
     contains
 
+        ! vector_avg(x):
+        ! returns the average value of entries in the vector x
         pure real(sp) function svector_avg(x)
             real(sp), intent(in) :: x(:)
             svector_avg = sum(x) / size(x)
@@ -74,6 +116,10 @@ module statistics_mod
             ivector_avg = real(sum(x), dp) / size(x)
         endfunction ivector_avg
 
+        ! jackknife(x, avg, err):
+        ! takes the vector x of samples and does the Jackknife on them
+        ! the resulting average of samples is stored in avg,
+        ! and error in err
         pure subroutine svector_jackknife(x, avg, err)
             real(sp), intent(in)  :: x(:)
             real(sp), intent(out) :: avg, err
@@ -105,7 +151,32 @@ module statistics_mod
             err = sqrt(sum((x - avg) ** 2) / (size(x)*(size(x)-1)))
         endsubroutine ivector_jackknife
 
+        subroutine dmatrix_jackknife(A, avg, err, dim)
+            real(dp),           intent(in)  :: A(:, :)
+            real(dp),           intent(out) :: avg(:)
+            real(dp),           intent(out) :: err(:)
+            integer , optional, intent(in)  :: dim
+            integer :: actualdim
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = matrix_avg(A, actualdim)
+            
+        endsubroutine dmatrix_jackknife
 
+        ! matrix_avg(A, dim):
+        ! averages the m x n matrix A along dimension dim,
+        ! returning a vector of averages
+        ! dim = 1: average along 1st dimension
+        ! (average along rows, returning an m-long vector
+        ! x where x(i) = average of A(i, :))
+        ! dim = 2: average along 2nd dimension
+        ! (average along columns, returning an n-long vector
+        ! x where x(j) = average of A(:, j))
+        !
+        ! dim is optional. if not present, the average is taken along dim = 1 (rows)
         pure function smatrix_avg(A, dim) result(avg)
             real(sp),           intent(in) :: A(:, :)
             integer , optional, intent(in) :: dim
@@ -116,8 +187,8 @@ module statistics_mod
             else
                 actualdim = 1
             endif
-            avg = sum(A, actualdim) / size(A, actualdim)
-        endfunction smatrix_avg
+            avg = sum(A, dim) / size(A, dim)
+        endfunction dmatrix_avg
         pure function dmatrix_avg(A, dim) result(avg)
             real(dp),           intent(in) :: A(:, :)
             integer , optional, intent(in) :: dim
@@ -128,7 +199,7 @@ module statistics_mod
             else
                 actualdim = 1
             endif
-            avg = sum(A, actualdim) / size(A, actualdim)
+            avg = sum(A, dim) / size(A, dim)
         endfunction dmatrix_avg
         pure function cmatrix_avg(A, dim) result(avg)
             complex(sp),           intent(in) :: A(:, :)
@@ -140,22 +211,97 @@ module statistics_mod
             else
                 actualdim = 1
             endif
-            avg = sum(A, actualdim) / size(A, actualdim)
+            avg = sum(A, dim) / size(A, dim)
         endfunction cmatrix_avg
         pure function zmatrix_avg(A, dim) result(avg)
-            complex(dp),                        intent(in) :: A(:, :)
-            integer                 , optional, intent(in) :: dim
-            integer                                        :: actualdim
-            complex(dp), allocatable                       :: avg(:)
+            complex(dp),           intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:)
             if (present(dim)) then
                 actualdim = dim
             else
                 actualdim = 1
             endif
-            avg = sum(A, actualdim) / size(A, actualdim)
+            avg = sum(A, dim) / size(A, dim)
         endfunction zmatrix_avg
         pure function imatrix_avg(A, dim) result(avg)
-            integer , intent(in)           :: A(:, :)
+            integer,           intent(in) :: A(:, :)
+            integer, optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction imatrix_avg
+
+        ! I don't think this basic functionality can work with assumed rank
+        ! arguments, so I am just putting a few ranked averages here (repeating
+        ! matrix = rank2 and vector = rank1 here for common syntax)
+        pure function srank1_avg(x) result(avg)
+            real(sp), intent(in) :: x(:)
+            real(sp) :: avg
+            avg = sum(x) / size(x)
+        endfunction srank1_avg
+        pure function srank2_avg(A, dim) result(avg)
+            real(sp),           intent(in) :: A(:, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(sp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction srank2_avg
+        pure function srank3_avg(A, dim) result(avg)
+            real(sp),           intent(in) :: A(:, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(sp), allocatable :: avg(:, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction srank3_avg
+        pure function srank4_avg(A, dim) result(avg)
+            real(sp),           intent(in) :: A(:, :, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(sp), allocatable :: avg(:, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction srank4_avg
+        pure function srank5_avg(A, dim) result(avg)
+            real(sp),           intent(in) :: A(:, :, :, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(sp), allocatable :: avg(:, :, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction srank5_avg
+
+        pure function drank1_avg(x) result(avg)
+            real(dp), intent(in) :: x(:)
+            real(dp) :: avg
+            avg = sum(x) / size(x)
+        endfunction drank1_avg
+        pure function drank2_avg(A, dim) result(avg)
+            real(dp),           intent(in) :: A(:, :)
             integer , optional, intent(in) :: dim
             integer               :: actualdim
             real(dp), allocatable :: avg(:)
@@ -164,23 +310,206 @@ module statistics_mod
             else
                 actualdim = 1
             endif
-            avg = real(sum(A, actualdim), dp) / real(size(A, actualdim), dp)
-        endfunction imatrix_avg
-
-        pure subroutine dmatrix_jackknife(A, avg, err, dim)
-            real(dp),           intent(in)  :: A(:, :)
-            real(dp),           intent(out) :: avg(:)
-            real(dp),           intent(out) :: err
-            integer , optional, intent(in)  :: dim
-            integer :: actualdim
-
+            avg = sum(A, dim) / size(A, dim)
+        endfunction drank2_avg
+        pure function drank3_avg(A, dim) result(avg)
+            real(dp),           intent(in) :: A(:, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :)
             if (present(dim)) then
                 actualdim = dim
             else
                 actualdim = 1
             endif
-            avg = matrix_avg(A, actualdim)
-        endsubroutine dmatrix_jackknife
+            avg = sum(A, dim) / size(A, dim)
+        endfunction drank3_avg
+        pure function drank4_avg(A, dim) result(avg)
+            real(dp),           intent(in) :: A(:, :, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction drank4_avg
+        pure function drank5_avg(A, dim) result(avg)
+            real(dp),           intent(in) :: A(:, :, :, :, :)
+            integer , optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction drank5_avg
+
+        pure function crank1_avg(x) result(avg)
+            complex(sp), intent(in) :: x(:)
+            complex(sp) :: avg
+            avg = sum(x) / size(x)
+        endfunction crank1_avg
+        pure function crank2_avg(A, dim) result(avg)
+            complex(sp),           intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(sp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction crank2_avg
+        pure function crank3_avg(A, dim) result(avg)
+            complex(sp),           intent(in) :: A(:, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(sp), allocatable :: avg(:, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction crank3_avg
+        pure function crank4_avg(A, dim) result(avg)
+            complex(sp),           intent(in) :: A(:, :, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(sp), allocatable :: avg(:, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction crank4_avg
+        pure function crank5_avg(A, dim) result(avg)
+            complex(sp),           intent(in) :: A(:, :, :, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(sp), allocatable :: avg(:, :, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction crank5_avg
+
+        pure function zrank1_avg(x) result(avg)
+            complex(dp), intent(in) :: x(:)
+            complex(dp) :: avg
+            avg = sum(x) / size(x)
+        endfunction zrank1_avg
+        pure function zrank2_avg(A, dim) result(avg)
+            complex(dp),           intent(in) :: A(:, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction zrank2_avg
+        pure function zrank3_avg(A, dim) result(avg)
+            complex(dp),           intent(in) :: A(:, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction zrank3_avg
+        pure function zrank4_avg(A, dim) result(avg)
+            complex(dp),           intent(in) :: A(:, :, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction zrank4_avg
+        pure function zrank5_avg(A, dim) result(avg)
+            complex(dp),           intent(in) :: A(:, :, :, :, :)
+            integer    , optional, intent(in) :: dim
+            integer                  :: actualdim
+            complex(dp), allocatable :: avg(:, :, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction zrank5_avg
+
+        pure function irank1_avg(x) result(avg)
+            integer, intent(in) :: x(:)
+            real(dp) :: avg
+            avg = sum(x) / size(x)
+        endfunction irank1_avg
+        pure function irank2_avg(A, dim) result(avg)
+            integer,           intent(in) :: A(:, :)
+            integer, optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction irank2_avg
+        pure function irank3_avg(A, dim) result(avg)
+            integer,           intent(in) :: A(:, :, :)
+            integer, optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction irank3_avg
+        pure function irank4_avg(A, dim) result(avg)
+            integer,           intent(in) :: A(:, :, :, :)
+            integer, optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction irank4_avg
+        pure function irank5_avg(A, dim) result(avg)
+            integer,           intent(in) :: A(:, :, :, :, :)
+            integer, optional, intent(in) :: dim
+            integer               :: actualdim
+            real(dp), allocatable :: avg(:, :, :, :)
+            if (present(dim)) then
+                actualdim = dim
+            else
+                actualdim = 1
+            endif
+            avg = sum(A, dim) / size(A, dim)
+        endfunction irank5_avg
 
 
 endmodule statistics_mod
@@ -310,6 +639,7 @@ module measurementtypes_mod
             integer          , intent(in)  :: binsize
             self%nbin    = nbin
             self%binsize = binsize
+            call self%unset()
             if (.not. allocated(self%bin)    ) allocate(self%bin(binsize))
             if (.not. allocated(self%binavgs)) allocate(self%binavgs(nbin))
         endsubroutine scamesr_dp_setup
@@ -320,8 +650,8 @@ module measurementtypes_mod
         endsubroutine scamesr_dp_unset
         subroutine scamesr_dp_jackknife(self)
             class(scamesr_dp), intent(inout) :: self
-            associate(binavgs => self%binavgs, avg => self%avg, err => self%err)
-                call vector_jackknife(binavgs, avg, err)
+            associate(binavgs => self%binavgs, nbin => self%nbin, avg => self%avg, err => self%err)
+                call jackknife(binavgs, nbin, avg, err)
             endassociate
         endsubroutine scamesr_dp_jackknife
         subroutine scamesr_dp_avgbin(self, i)
@@ -330,7 +660,7 @@ module measurementtypes_mod
             class(scamesr_dp), intent(inout) :: self
             integer          , intent(in)    :: i
             associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
-                binavgs(i) = vector_avg(bin)
+                binavgs(i) = vector_avg(bin, binsize)
             endassociate
         endsubroutine scamesr_dp_avgbin
         subroutine scamesr_dp_sgnavgadjust(self, sgnmeas)
@@ -348,6 +678,7 @@ module measurementtypes_mod
             integer           , intent(in)  :: binsize
             self%nbin    = nbin
             self%binsize = binsize
+            call self%unset()
             if (.not. allocated(self%bin)    ) allocate(self%bin(binsize))
             if (.not. allocated(self%binavgs)) allocate(self%binavgs(nbin))
         endsubroutine scamesr_int_setup
@@ -358,15 +689,15 @@ module measurementtypes_mod
         endsubroutine scamesr_int_unset
         subroutine scamesr_int_jackknife(self)
             class(scamesr_int), intent(inout) :: self
-            associate(binavgs => self%binavgs, avg => self%avg, err => self%err)
-                call vector_jackknife(binavgs, avg, err)
+            associate(binavgs => self%binavgs, nbin => self%nbin, avg => self%avg, err => self%err)
+                call jackknife(binavgs, nbin, avg, err)
             endassociate
         endsubroutine scamesr_int_jackknife
         subroutine scamesr_int_avgbin(self, i)
             class(scamesr_int), intent(inout) :: self
             integer           , intent(in)    :: i
-            associate(binavgs => self%binavgs, bin => self%bin)
-                binavgs(i) = vector_avg(bin)
+            associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
+                binavgs(i) = vector_avg(bin, binsize)
             endassociate
         endsubroutine scamesr_int_avgbin
 
@@ -376,6 +707,7 @@ module measurementtypes_mod
             integer          , intent(in)  :: m
             integer          , intent(in)  :: nbin
             integer          , intent(in)  :: binsize
+            call self%unset()
             if (.not. allocated(self%bin)    ) allocate(self%bin(m, binsize))
             if (.not. allocated(self%binavgs)) allocate(self%binavgs(m, nbin))
             if (.not. allocated(self%avg)    ) allocate(self%avg(m))
@@ -393,8 +725,8 @@ module measurementtypes_mod
             ! Later on: binavgs = binavgs / sgnbinavgs
             class(scamesr_dp), intent(inout) :: self
             integer          , intent(in)    :: i
-            associate(binavgs => self%binavgs, bin => self%bin)
-                binavgs(i) = vector_avg(bin)
+            associate(binavgs => self%binavgs, bin => self%bin, binsize => self%binsize)
+                binavgs(i) = vector_avg(bin, binsize)
             endassociate
         endsubroutine vecmesr_dp_avgbin
 
